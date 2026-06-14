@@ -21,6 +21,9 @@ public sealed record MerchantStartResult(
 /// <summary>Result of a read/command action (<c>status</c>, <c>cancel</c>).</summary>
 public sealed record MerchantActionResult(bool Success, string? StatusCode, string? Message, string RawJson);
 
+/// <summary>A deposit bank from <c>action=banks</c>. <c>Id</c> is passed as <c>bankId</c> on a transfer start (IDs are sparse).</summary>
+public sealed record MerchantBank(int Id, string Name, bool HasActiveAccount, decimal? DepositMin, decimal? DepositMax);
+
 /// <summary>
 /// Real HTTP client against adminka's MerchantApi. This is the port of
 /// <c>CasinoSimService</c>'s hash + action logic into a network client —
@@ -91,6 +94,45 @@ public sealed class AdminkaMerchantClient(HttpClient http, IOptions<AdminkaMerch
         }
 
         return StartAsync("/withdraw/", qs, ct);
+    }
+
+    /// <summary><c>action=banks</c> (deposit). Hash: md5(MID + "banks" + SECRETKEY). Returns the agency's banks; filter on <see cref="MerchantBank.HasActiveAccount"/>.</summary>
+    public async Task<(bool Success, IReadOnlyList<MerchantBank> Banks, string? Message)> GetDepositBanksAsync(CancellationToken ct = default)
+    {
+        var qs = new Dictionary<string, string?>
+        {
+            ["action"] = "banks",
+            ["mid"] = _o.Mid,
+            ["hash"] = MerchantHash.Md5Hex(_o.Mid, "banks", _o.SecretKey),
+        };
+        var (root, _) = await GetEnvelopeAsync("/deposit/", qs, ct).ConfigureAwait(false);
+        var (success, _, message) = ReadEnvelopeHead(root);
+
+        var banks = new List<MerchantBank>();
+        if (success && root is { ValueKind: JsonValueKind.Object } r
+            && r.TryGetProperty("data", out var data)
+            && data.ValueKind == JsonValueKind.Object
+            && data.TryGetProperty("banks", out var arr)
+            && arr.ValueKind == JsonValueKind.Array)
+        {
+            foreach (var b in arr.EnumerateArray())
+            {
+                if (b.ValueKind != JsonValueKind.Object || !b.TryGetProperty("id", out var idEl)
+                    || !idEl.TryGetInt32(out var id))
+                {
+                    continue;
+                }
+
+                banks.Add(new MerchantBank(
+                    id,
+                    b.TryGetProperty("name", out var n) ? n.GetString() ?? $"Bank {id}" : $"Bank {id}",
+                    b.TryGetProperty("hasActiveAccount", out var ha) && ha.ValueKind == JsonValueKind.True,
+                    b.TryGetProperty("depositMin", out var mn) && mn.TryGetDecimal(out var mnv) ? mnv : null,
+                    b.TryGetProperty("depositMax", out var mx) && mx.TryGetDecimal(out var mxv) ? mxv : null));
+            }
+        }
+
+        return (success, banks, message);
     }
 
     /// <summary><c>status</c> read. Hash: md5(MID + "status" + TXID + SECRETKEY); TXID is adminka's public id (gotcha 068f6f15).</summary>

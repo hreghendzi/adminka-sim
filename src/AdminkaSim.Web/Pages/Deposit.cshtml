@@ -18,6 +18,22 @@
             <div class="mb-3">
                 <label asp-for="Method" class="form-label">Method</label>
                 <input asp-for="Method" class="form-control" />
+                <div class="form-text">Havale = <code>transfer</code> (needs a bank below).</div>
+            </div>
+            <div class="mb-3">
+                <label asp-for="BankId" class="form-label">Bank (for Havale)</label>
+                <select asp-for="BankId" class="form-select">
+                    <option value="">— select a bank —</option>
+                    @foreach (var b in Model.Banks)
+                    {
+                        <option value="@b.Id">@b.Name@(b.DepositMin is not null ? $" ({b.DepositMin:0}–{b.DepositMax:0} TRY)" : "")</option>
+                    }
+                </select>
+                <span asp-validation-for="BankId" class="text-danger"></span>
+                @if (Model.Banks.Count == 0)
+                {
+                    <div class="form-text text-warning">No banks available from adminka for this merchant.</div>
+                }
             </div>
             <button type="submit" class="btn btn-primary">Start deposit</button>
             <a asp-page="/Index" class="btn btn-link">Back to wallet</a>

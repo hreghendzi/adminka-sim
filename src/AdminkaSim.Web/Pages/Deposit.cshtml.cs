@@ -1,5 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 using AdminkaSim.Web.Data;
+using AdminkaSim.Web.Merchant;
 using AdminkaSim.Web.Wallet;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
@@ -9,9 +10,11 @@ using Microsoft.EntityFrameworkCore;
 namespace AdminkaSim.Web.Pages;
 
 /// <summary>
-/// Start a deposit through adminka's merchant API. On success adminka returns
-/// the pool account to "pay"; the entry stays Pending until an operator approves
-/// it in the adminka console and the webhook callback credits the wallet.
+/// Start a deposit through adminka's merchant API. Havale (<c>transfer</c>)
+/// requires a <c>bankId</c> — the bank list is fetched from adminka's
+/// <c>action=banks</c> and shown as a dropdown. On success adminka returns the
+/// pool account to "pay"; the entry stays Pending until an operator approves it
+/// and the webhook callback credits the wallet.
 /// </summary>
 public sealed class DepositModel(
     UserManager<SimUser> userManager,
@@ -20,17 +23,31 @@ public sealed class DepositModel(
 {
     [BindProperty]
     [Range(0.01, 1_000_000)]
-    public decimal Amount { get; set; }
+    public decimal Amount { get; set; } = 300;
 
     [BindProperty]
     public string Method { get; set; } = "transfer";
 
+    [BindProperty]
+    public int? BankId { get; set; }
+
+    public IReadOnlyList<MerchantBank> Banks { get; private set; } = [];
     public string? ResultMessage { get; private set; }
     public bool ResultSuccess { get; private set; }
     public IReadOnlyDictionary<string, string?>? PayToAccount { get; private set; }
 
+    public async Task OnGetAsync(CancellationToken ct) => Banks = await wallet.GetDepositBanksAsync(ct);
+
     public async Task<IActionResult> OnPostAsync(CancellationToken ct)
     {
+        Banks = await wallet.GetDepositBanksAsync(ct);
+
+        // Havale requires a bank.
+        if (string.Equals(Method, "transfer", StringComparison.OrdinalIgnoreCase) && BankId is null)
+        {
+            ModelState.AddModelError(nameof(BankId), "Select a bank for a Havale (transfer) deposit.");
+        }
+
         if (!ModelState.IsValid)
         {
             return Page();
@@ -50,7 +67,7 @@ public sealed class DepositModel(
         }
 
         var userCode = LocalPart(user.Email) ?? user.Id;
-        var (result, _) = await wallet.StartDepositAsync(w, userCode, user.DisplayName ?? userCode, Amount, Method, ct);
+        var (result, _) = await wallet.StartDepositAsync(w, userCode, user.DisplayName ?? userCode, Amount, Method, BankId, ct);
 
         ResultSuccess = result.Success;
         if (result.Success)

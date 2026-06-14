@@ -33,14 +33,21 @@ public sealed partial class WalletService(
 {
     private readonly AdminkaMerchantOptions _o = options.Value;
 
+    /// <summary>Deposit banks for the UI (transfer/Havale needs a bankId). Active accounts only.</summary>
+    public async Task<IReadOnlyList<MerchantBank>> GetDepositBanksAsync(CancellationToken ct = default)
+    {
+        var (success, banks, _) = await merchant.GetDepositBanksAsync(ct).ConfigureAwait(false);
+        return success ? banks.Where(b => b.HasActiveAccount).ToList() : [];
+    }
+
     /// <summary>Starts a deposit: creates a Pending ledger entry and calls adminka. Returns the start result for the UI to render the pay-to account.</summary>
     public async Task<(MerchantStartResult Result, string MerchantTxId)> StartDepositAsync(
-        WalletEntity wallet, string userCode, string name, decimal amount, string? method, CancellationToken ct = default)
+        WalletEntity wallet, string userCode, string name, decimal amount, string? method, int? bankId, CancellationToken ct = default)
     {
         var m = string.IsNullOrWhiteSpace(method) ? _o.DefaultMethod : method!;
         var merchantTxId = Guid.NewGuid().ToString("N");
 
-        var result = await merchant.StartDepositAsync(merchantTxId, amount, m, userCode, name, ct: ct).ConfigureAwait(false);
+        var result = await merchant.StartDepositAsync(merchantTxId, amount, m, userCode, name, bankId, ct).ConfigureAwait(false);
         if (result.Success)
         {
             db.WalletLedger.Add(NewPending(wallet.Id, LedgerDirection.Deposit, amount, merchantTxId, result.PublicTxId));
