@@ -46,6 +46,20 @@ Requires the .NET 10 SDK and a reachable PostgreSQL. Set the connection string
 dotnet run --project src/AdminkaSim.Web
 ```
 
-Migrations are applied and the 3 demo users seeded on startup. Demo logins:
-`player1@demo.local` / `player2@demo.local` / `player3@demo.local` (password
-`Demo123` by default — override via `Seed:DemoUserPassword`).
+Migrations are applied and the 3 demo users are seeded on startup.
+
+## Demo credentials
+
+The three seeded demo players (documented here, **not** shown on the login page):
+
+| Username | Password |
+|---|---|
+| `player1@demo.local` | `Demo123` |
+| `player2@demo.local` | `Demo123` |
+| `player3@demo.local` | `Demo123` |
+
+The password comes from config `Seed:DemoUserPassword` (default `Demo123`); in the
+cluster it is the `seed-password` key of the `adminka-sim-secrets` Secret. The
+seeder only **creates** missing users — it does not reset an existing user's
+password, so change the secret *before* first seed (or reset the user) to rotate.
+These are throwaway demo accounts for a public demo; rotate before any real use.
