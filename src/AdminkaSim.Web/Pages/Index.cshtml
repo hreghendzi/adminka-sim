@@ -1,0 +1,49 @@
+@page
+@model IndexModel
+@{
+    ViewData["Title"] = "My wallet";
+}
+
+<div class="row">
+    <div class="col-md-8">
+        <h1 class="h3">Welcome, @Model.DisplayName</h1>
+
+        <div class="card my-3">
+            <div class="card-body">
+                <h2 class="h6 text-muted mb-1">Wallet balance</h2>
+                <p class="display-6 mb-0">@Model.Balance.ToString("0.00") @Model.Currency</p>
+            </div>
+        </div>
+
+        <div class="d-flex gap-2 mb-4">
+            <button class="btn btn-primary" disabled>Deposit</button>
+            <button class="btn btn-outline-primary" disabled>Withdraw</button>
+            <span class="align-self-center text-muted small">— deposit / withdraw arrive in P1</span>
+        </div>
+
+        <h2 class="h5">Recent activity</h2>
+        @if (Model.RecentLedger.Count == 0)
+        {
+            <p class="text-muted">No transactions yet.</p>
+        }
+        else
+        {
+            <table class="table table-sm">
+                <thead>
+                    <tr><th>When</th><th>Direction</th><th>Amount</th><th>Status</th></tr>
+                </thead>
+                <tbody>
+                    @foreach (var l in Model.RecentLedger)
+                    {
+                        <tr>
+                            <td>@l.CreatedAt.LocalDateTime</td>
+                            <td>@l.Direction</td>
+                            <td>@l.Amount.ToString("0.00") @l.Currency</td>
+                            <td>@l.Status</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
+    </div>
+</div>
