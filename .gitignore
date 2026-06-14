@@ -1,0 +1,27 @@
+# .NET build output
+bin/
+obj/
+[Dd]ebug/
+[Rr]elease/
+artifacts/
+
+# Rider / VS / VS Code
+.vs/
+.idea/
+*.user
+*.suo
+
+# Test results
+[Tt]est[Rr]esult*/
+coverage*.json
+coverage*.xml
+coverage*.info
+
+# User-specific / secrets (never commit real connection strings or secrets)
+appsettings.*.local.json
+secrets.json
+*.pfx
+
+# OS
+.DS_Store
+Thumbs.db

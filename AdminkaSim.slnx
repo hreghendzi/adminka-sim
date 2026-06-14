@@ -1,0 +1,8 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/AdminkaSim.Web/AdminkaSim.Web.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/AdminkaSim.Tests/AdminkaSim.Tests.csproj" />
+  </Folder>
+</Solution>
