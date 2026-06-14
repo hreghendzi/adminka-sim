@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: adminka-sim
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: adminka-sim
+spec:
+  type: {{ .Values.service.type }}
+  selector:
+    app: adminka-sim
+  ports:
+    - name: http
+      port: {{ .Values.service.port }}
+      targetPort: {{ .Values.service.targetPort }}
+      nodePort: {{ .Values.service.nodePort }}

@@ -1,0 +1,81 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: adminka-sim
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: adminka-sim
+spec:
+  replicas: {{ .Values.replicas }}
+  selector:
+    matchLabels:
+      app: adminka-sim
+  template:
+    metadata:
+      labels:
+        app: adminka-sim
+    spec:
+      containers:
+        - name: web
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - containerPort: {{ .Values.service.targetPort }}
+          env:
+            - name: ASPNETCORE_ENVIRONMENT
+              value: {{ .Values.aspnetcoreEnvironment | quote }}
+            - name: ASPNETCORE_URLS
+              value: "http://+:{{ .Values.service.targetPort }}"
+            # CNPG auto-generates <cluster>-app with these keys.
+            - name: DB_USER
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.postgres.clusterName }}-app
+                  key: username
+            - name: DB_PASS
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.postgres.clusterName }}-app
+                  key: password
+            - name: DB_NAME
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.postgres.clusterName }}-app
+                  key: dbname
+            # $(VAR) is expanded by k8s from the earlier env entries.
+            - name: ConnectionStrings__DefaultConnection
+              value: "Host={{ .Values.postgres.clusterName }}-rw;Port=5432;Database=$(DB_NAME);Username=$(DB_USER);Password=$(DB_PASS)"
+            - name: AdminkaMerchant__BaseUrl
+              value: {{ .Values.adminkaMerchant.baseUrl | quote }}
+            - name: AdminkaMerchant__Mid
+              value: {{ .Values.adminkaMerchant.mid | quote }}
+            - name: AdminkaMerchant__CallbackUrl
+              value: {{ .Values.adminkaMerchant.callbackUrl | quote }}
+            - name: AdminkaMerchant__DefaultMethod
+              value: {{ .Values.adminkaMerchant.defaultMethod | quote }}
+            - name: AdminkaMerchant__Currency
+              value: {{ .Values.adminkaMerchant.currency | quote }}
+            - name: AdminkaMerchant__SecretKey
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.secretName }}
+                  key: merchant-secret
+            - name: Seed__DemoUserPassword
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.secretName }}
+                  key: seed-password
+          readinessProbe:
+            httpGet:
+              path: /Account/Login
+              port: {{ .Values.service.targetPort }}
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /Account/Login
+              port: {{ .Values.service.targetPort }}
+            initialDelaySeconds: 20
+            periodSeconds: 20
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
