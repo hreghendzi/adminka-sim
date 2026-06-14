@@ -1,0 +1,48 @@
+@page
+@model DepositModel
+@{
+    ViewData["Title"] = "Deposit";
+}
+
+<div class="row">
+    <div class="col-md-6">
+        <h1 class="h3 mb-3">Deposit</h1>
+
+        <form method="post" class="mb-4">
+            <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+            <div class="mb-3">
+                <label asp-for="Amount" class="form-label">Amount (TRY)</label>
+                <input asp-for="Amount" class="form-control" type="number" step="0.01" min="0.01" />
+                <span asp-validation-for="Amount" class="text-danger"></span>
+            </div>
+            <div class="mb-3">
+                <label asp-for="Method" class="form-label">Method</label>
+                <input asp-for="Method" class="form-control" />
+            </div>
+            <button type="submit" class="btn btn-primary">Start deposit</button>
+            <a asp-page="/Index" class="btn btn-link">Back to wallet</a>
+        </form>
+
+        @if (Model.ResultMessage is not null)
+        {
+            <div class="alert @(Model.ResultSuccess ? "alert-success" : "alert-danger")">@Model.ResultMessage</div>
+        }
+
+        @if (Model.PayToAccount is { Count: > 0 })
+        {
+            <h2 class="h5">Pay to</h2>
+            <table class="table table-sm">
+                <tbody>
+                    @foreach (var kv in Model.PayToAccount)
+                    {
+                        <tr><th class="text-muted">@kv.Key</th><td>@kv.Value</td></tr>
+                    }
+                </tbody>
+            </table>
+        }
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}
