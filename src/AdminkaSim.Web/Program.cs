@@ -1,4 +1,7 @@
 using AdminkaSim.Web.Data;
+using AdminkaSim.Web.Endpoints;
+using AdminkaSim.Web.Merchant;
+using AdminkaSim.Web.Wallet;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 
@@ -37,6 +40,25 @@ builder.Services.ConfigureApplicationCookie(o =>
     o.SlidingExpiration = true;
 });
 
+// adminka merchant integration (plan §3.1). Bound but not validate-on-start, so
+// the app still boots locally before adminka is configured; merchant calls just
+// fail until BaseUrl/Mid/SecretKey are set.
+builder.Services.AddOptions<AdminkaMerchantOptions>()
+    .Bind(builder.Configuration.GetSection(AdminkaMerchantOptions.SectionName));
+
+builder.Services.AddHttpClient<AdminkaMerchantClient>()
+    .ConfigureHttpClient((sp, client) =>
+    {
+        var o = sp.GetRequiredService<Microsoft.Extensions.Options.IOptions<AdminkaMerchantOptions>>().Value;
+        if (!string.IsNullOrWhiteSpace(o.BaseUrl))
+        {
+            client.BaseAddress = new Uri(o.BaseUrl);
+        }
+        client.Timeout = TimeSpan.FromSeconds(15);
+    });
+
+builder.Services.AddScoped<WalletService>();
+
 // Everything requires login except the auth pages and the error page.
 builder.Services.AddRazorPages(options =>
 {
@@ -63,6 +85,9 @@ app.UseAuthorization();
 app.MapStaticAssets();
 app.MapRazorPages()
    .WithStaticAssets();
+
+// adminka -> sim webhook callback receiver (anonymous; authenticated by v1 hash).
+app.MapAdminkaCallback();
 
 // Apply migrations + seed the 3 demo players (idempotent).
 await SeedData.InitializeAsync(app.Services, app.Configuration);
