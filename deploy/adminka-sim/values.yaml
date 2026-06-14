@@ -1,0 +1,47 @@
+# adminka-sim — standalone deployment values. NodePort 30480 fronted by
+# Cloudflare+HAProxy at https://sim.masisyepremyan.com (owner-wired).
+
+image:
+  repository: docker.io/adminka/adminka-sim
+  tag: dev
+  # Local-only image built by buildctl into the K3s containerd store — never pull.
+  pullPolicy: Never
+
+replicas: 1
+
+service:
+  type: NodePort
+  port: 80
+  targetPort: 8080
+  nodePort: 30480
+
+aspnetcoreEnvironment: Production
+
+# How the sim reaches adminka as a registered merchant (plan §3.1).
+adminkaMerchant:
+  # MerchantApi is ClusterIP-only today (no public/NodePort path). This base URL
+  # is the one config value that flips when adminka later exposes MerchantApi
+  # publicly for a true off-LAN deployment — the boundary stays "merchant wire
+  # contract at a config base URL".
+  baseUrl: "http://adminka-main-adminka-umbrella-merchant-api.adminka-main.svc.cluster.local"
+  mid: "ADMINKA_SIM_001"
+  callbackUrl: "https://sim.masisyepremyan.com/callback"
+  defaultMethod: "transfer"
+  currency: "TRY"
+
+# Pre-created (NOT in git) Secret with keys: merchant-secret, seed-password.
+secretName: adminka-sim-secrets
+
+postgres:
+  clusterName: adminka-sim-data
+  database: adminka_sim
+  owner: adminka_sim
+  instances: 1
+  storageSize: 5Gi
+
+resources:
+  requests:
+    cpu: 50m
+    memory: 128Mi
+  limits:
+    memory: 512Mi

@@ -1,0 +1,19 @@
+apiVersion: postgresql.cnpg.io/v1
+kind: Cluster
+metadata:
+  name: {{ .Values.postgres.clusterName }}
+  namespace: {{ .Release.Namespace }}
+  annotations:
+    # Stateful CR: helm uninstall MUST NOT drop the database PVCs. Delete the
+    # data only via an explicit `kubectl delete cluster` / `delete namespace`.
+    "helm.sh/resource-policy": keep
+spec:
+  instances: {{ .Values.postgres.instances }}
+  imageName: ghcr.io/cloudnative-pg/postgresql:16
+  storage:
+    size: {{ .Values.postgres.storageSize }}
+    # storageClass omitted → inherits the K3s default (local-path).
+  bootstrap:
+    initdb:
+      database: {{ .Values.postgres.database | quote }}
+      owner: {{ .Values.postgres.owner | quote }}

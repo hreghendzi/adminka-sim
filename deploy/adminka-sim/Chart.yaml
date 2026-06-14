@@ -1,0 +1,6 @@
+apiVersion: v2
+name: adminka-sim
+description: adminka-sim — standalone Razor merchant simulator (3 demo players, own wallet ledger) integrating against adminka's merchant API.
+type: application
+version: 0.1.0
+appVersion: "0.1.0"

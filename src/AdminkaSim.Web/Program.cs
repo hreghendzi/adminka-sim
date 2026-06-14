@@ -2,10 +2,22 @@ using AdminkaSim.Web.Data;
 using AdminkaSim.Web.Endpoints;
 using AdminkaSim.Web.Merchant;
 using AdminkaSim.Web.Wallet;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
+
+// Behind HAProxy + Cloudflare (TLS terminated at the edge): honour
+// X-Forwarded-For/Proto so HTTPS detection, redirects, HSTS, and secure
+// cookies work. The proxy is the cluster edge, not a known static IP, so the
+// known-proxy/network lists are cleared (the NodePort is not internet-facing).
+builder.Services.Configure<ForwardedHeadersOptions>(o =>
+{
+    o.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
+    o.KnownIPNetworks.Clear();
+    o.KnownProxies.Clear();
+});
 
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
     ?? throw new InvalidOperationException(
@@ -69,6 +81,9 @@ builder.Services.AddRazorPages(options =>
 });
 
 var app = builder.Build();
+
+// Must run before HTTPS redirect / auth so the scheme is corrected first.
+app.UseForwardedHeaders();
 
 if (!app.Environment.IsDevelopment())
 {
