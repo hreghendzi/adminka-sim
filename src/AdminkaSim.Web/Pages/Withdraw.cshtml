@@ -13,21 +13,25 @@
             <div asp-validation-summary="ModelOnly" class="text-danger"></div>
             <div class="mb-3">
                 <label asp-for="Amount" class="form-label">Amount (TRY)</label>
-                <input asp-for="Amount" class="form-control" type="number" step="0.01" min="0.01" />
+                <input asp-for="Amount" class="form-control" type="number" step="0.01" min="0.01" placeholder="150.00" />
                 <span asp-validation-for="Amount" class="text-danger"></span>
+                <div class="form-text">Example: <code>150.00</code> (must be ≤ your available balance)</div>
             </div>
             <div class="mb-3">
                 <label asp-for="Iban" class="form-label">IBAN</label>
-                <input asp-for="Iban" class="form-control" placeholder="TR..." />
+                <input asp-for="Iban" class="form-control" placeholder="TR33 0006 1005 1978 6457 8413 26" />
                 <span asp-validation-for="Iban" class="text-danger"></span>
+                <div class="form-text">Example: <code>TR33 0006 1005 1978 6457 8413 26</code> (Turkish IBAN — <code>TR</code> + 24 digits)</div>
             </div>
             <div class="mb-3">
                 <label asp-for="BankName" class="form-label">Bank name</label>
-                <input asp-for="BankName" class="form-control" />
+                <input asp-for="BankName" class="form-control" placeholder="Garanti BBVA" />
+                <div class="form-text">Example: <code>Garanti BBVA</code></div>
             </div>
             <div class="mb-3">
                 <label asp-for="BankBranch" class="form-label">Bank branch</label>
-                <input asp-for="BankBranch" class="form-control" />
+                <input asp-for="BankBranch" class="form-control" placeholder="Kadıköy" />
+                <div class="form-text">Example: <code>Kadıköy</code></div>
             </div>
             <button type="submit" class="btn btn-primary">Start withdraw</button>
             <a asp-page="/Index" class="btn btn-link">Back to wallet</a>
