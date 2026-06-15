@@ -10,7 +10,12 @@
         <p class="text-muted">Available: @Model.Balance.ToString("0.00") TRY</p>
 
         <form method="post" class="mb-4">
-            <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+            <div asp-validation-summary="All" class="text-danger"></div>
+            @* Withdraw is Havale-only; Method is fixed (not user-chosen). It MUST be
+               posted because Method is a non-nullable [BindProperty] string — with
+               nullable-reference-types on, a missing non-nullable bind property is
+               implicitly Required and would fail ModelState (silent early return). *@
+            <input type="hidden" asp-for="Method" />
             <div class="mb-3">
                 <label asp-for="Amount" class="form-label">Amount (TRY)</label>
                 <input asp-for="Amount" class="form-control" type="number" step="0.01" min="0.01" placeholder="150.00" />
