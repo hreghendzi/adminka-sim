@@ -22,7 +22,7 @@ public sealed class DepositModel(
     WalletService wallet) : PageModel
 {
     [BindProperty]
-    [Range(0.01, 1_000_000)]
+    [Range(100, 100_000, ErrorMessage = "Amount must be between 100 and 100,000 TRY.")]
     public decimal Amount { get; set; } = 300;
 
     [BindProperty]
@@ -46,6 +46,12 @@ public sealed class DepositModel(
         if (string.Equals(Method, "transfer", StringComparison.OrdinalIgnoreCase) && BankId is null)
         {
             ModelState.AddModelError(nameof(BankId), "Select a bank for a Havale (transfer) deposit.");
+        }
+
+        // Amount is whole TRY (FASTPAY/adminka type amount as int — integration-check #2).
+        if (Amount != decimal.Truncate(Amount))
+        {
+            ModelState.AddModelError(nameof(Amount), "Amount must be a whole number of TRY.");
         }
 
         if (!ModelState.IsValid)

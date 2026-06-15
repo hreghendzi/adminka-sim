@@ -4,48 +4,72 @@
     ViewData["Title"] = "Withdraw";
 }
 
-<div class="row">
-    <div class="col-md-6">
-        <h1 class="h3 mb-1">Withdraw</h1>
-        <p class="text-muted">Available: @Model.Balance.ToString("0.00") TRY</p>
+<div class="cashier">
+    <div class="cashier-head">
+        <partial name="_CashierTabs" />
+    </div>
+    <div class="cashier-body">
+        <partial name="_MethodTiles" />
 
-        <form method="post" class="mb-4">
-            <div asp-validation-summary="All" class="text-danger"></div>
-            @* Withdraw is Havale-only; Method is fixed (not user-chosen). It MUST be
-               posted because Method is a non-nullable [BindProperty] string — with
-               nullable-reference-types on, a missing non-nullable bind property is
-               implicitly Required and would fail ModelState (silent early return). *@
-            <input type="hidden" asp-for="Method" />
-            <div class="mb-3">
-                <label asp-for="Amount" class="form-label">Amount (TRY)</label>
-                <input asp-for="Amount" class="form-control" type="number" step="0.01" min="0.01" placeholder="150.00" />
-                <span asp-validation-for="Amount" class="text-danger"></span>
-                <div class="form-text">Example: <code>150.00</code> (must be ≤ your available balance)</div>
-            </div>
-            <div class="mb-3">
-                <label asp-for="Iban" class="form-label">IBAN</label>
-                <input asp-for="Iban" class="form-control" placeholder="TR33 0006 1005 1978 6457 8413 26" />
-                <span asp-validation-for="Iban" class="text-danger"></span>
-                <div class="form-text">Example: <code>TR33 0006 1005 1978 6457 8413 26</code> (Turkish IBAN — <code>TR</code> + 24 digits)</div>
-            </div>
-            <div class="mb-3">
-                <label asp-for="BankName" class="form-label">Bank name</label>
-                <input asp-for="BankName" class="form-control" placeholder="Garanti BBVA" />
-                <div class="form-text">Example: <code>Garanti BBVA</code></div>
-            </div>
-            <div class="mb-3">
-                <label asp-for="BankBranch" class="form-label">Bank branch</label>
-                <input asp-for="BankBranch" class="form-control" placeholder="Kadıköy" />
-                <div class="form-text">Example: <code>Kadıköy</code></div>
-            </div>
-            <button type="submit" class="btn btn-primary">Start withdraw</button>
-            <a asp-page="/Index" class="btn btn-link">Back to wallet</a>
-        </form>
+        <div class="row g-4">
+            <div class="col-lg-7">
+                <div class="method-meta mb-3">
+                    <div class="name">AdminkaPay Havale</div>
+                    <span class="text-muted">Available: <strong>@Model.Balance.ToString("N2") TRY</strong>
+                        &nbsp;·&nbsp; Min: <strong>@PaymentMethods.MinAmount.ToString("N0") TRY</strong>
+                        &nbsp;·&nbsp; Max: <strong>@PaymentMethods.MaxAmount.ToString("N0") TRY</strong></span>
+                </div>
 
-        @if (Model.ResultMessage is not null)
-        {
-            <div class="alert @(Model.ResultSuccess ? "alert-success" : "alert-danger")">@Model.ResultMessage</div>
-        }
+                <form method="post" class="mb-2">
+                    <div asp-validation-summary="All" class="text-danger mb-2"></div>
+                    @* Withdraw is Havale-only; Method is fixed and posted as hidden. *@
+                    <input type="hidden" asp-for="Method" />
+
+                    <div class="mb-3">
+                        <label asp-for="BankName" class="form-label">Bank</label>
+                        <select asp-for="BankName" class="form-select">
+                            <option value="">— select your bank —</option>
+                            @foreach (var name in TurkishBanks.Names)
+                            {
+                                <option value="@name">@name</option>
+                            }
+                        </select>
+                        <span asp-validation-for="BankName" class="text-danger"></span>
+                    </div>
+
+                    <div class="mb-3">
+                        <label asp-for="Iban" class="form-label">IBAN</label>
+                        <input asp-for="Iban" class="form-control" placeholder="TR33 0006 1005 1978 6457 8413 26" />
+                        <span asp-validation-for="Iban" class="text-danger"></span>
+                    </div>
+
+                    <div class="mb-3">
+                        <label asp-for="Amount" class="form-label">Amount</label>
+                        <div class="input-group">
+                            <input asp-for="Amount" class="form-control" type="number" step="1" min="100" max="100000" placeholder="150" />
+                            <span class="input-group-text">TRY</span>
+                        </div>
+                        <span asp-validation-for="Amount" class="text-danger"></span>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary px-4">Withdraw</button>
+                </form>
+
+                @if (Model.ResultMessage is not null)
+                {
+                    <div class="alert @(Model.ResultSuccess ? "alert-success" : "alert-danger") mt-3">@Model.ResultMessage</div>
+                }
+            </div>
+
+            <div class="col-lg-5">
+                <div class="payment-info">
+                    <h2 class="h6">Payment Info</h2>
+                    <p>Withdraw via Havale to your own Turkish bank account. Pick your bank, enter
+                       your IBAN and amount; the request stays pending until an operator approves it,
+                       and your balance is debited when the confirmation callback lands.</p>
+                </div>
+            </div>
+        </div>
     </div>
 </div>
 

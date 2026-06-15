@@ -1,31 +1,199 @@
-html {
-  font-size: 14px;
+/* ==========================================================================
+   adminka-sim — dark casino theme (m-11 jumpobet replication)
+   Minimal re-skin: a small set of CSS variables + Bootstrap overrides that
+   turn the stock template into a jumpobet-style dark casino. No framework swap.
+   ========================================================================== */
+
+:root {
+  --bg:        #0a0f0c;
+  --bg-2:      #0e1611;
+  --surface:   #15211b;
+  --surface-2: #1b2a22;
+  --border:    #2a3d33;
+  --green:     #22c55e;
+  --green-2:   #1aa84e;
+  --green-deep:#0f5132;
+  --lime:      #a3e635;
+  --text:      #e8f0eb;
+  --muted:     #93a89b;
+  --danger:    #ef4444;
+  --warn:      #f59e0b;
+  --radius:    12px;
 }
 
-@media (min-width: 768px) {
-  html {
-    font-size: 16px;
-  }
-}
-
-.btn:focus, .btn:active:focus, .btn-link.nav-link:focus, .form-control:focus, .form-check-input:focus {
-  box-shadow: 0 0 0 0.1rem white, 0 0 0 0.25rem #258cfb;
-}
-
-html {
-  position: relative;
-  min-height: 100%;
-}
+html { font-size: 15px; position: relative; min-height: 100%; }
 
 body {
-  margin-bottom: 60px;
+  margin-bottom: 64px;
+  background:
+    radial-gradient(1200px 600px at 80% -10%, rgba(34,197,94,.10), transparent 60%),
+    radial-gradient(900px 500px at 0% 0%, rgba(163,230,53,.06), transparent 55%),
+    var(--bg);
+  color: var(--text);
+  font-family: "Segoe UI", system-ui, -apple-system, Roboto, Arial, sans-serif;
 }
 
-.form-floating > .form-control-plaintext::placeholder, .form-floating > .form-control::placeholder {
-  color: var(--bs-secondary-color);
-  text-align: end;
+a { color: var(--green); text-decoration: none; }
+a:hover { color: var(--lime); }
+.text-muted { color: var(--muted) !important; }
+h1,h2,h3,h4,h5,h6 { color: var(--text); }
+code { color: var(--lime); background: rgba(163,230,53,.08); padding: .05rem .3rem; border-radius: 4px; }
+
+/* ---- Header / nav -------------------------------------------------------- */
+.site-header {
+  background: linear-gradient(180deg, #0d1410, #0a0f0c);
+  border-bottom: 1px solid var(--border);
+  box-shadow: 0 2px 18px rgba(0,0,0,.45);
+}
+.brand-logo {
+  font-weight: 800; font-size: 1.35rem; letter-spacing: .5px;
+  color: var(--text); display: inline-flex; align-items: center; gap: 0;
+}
+.brand-logo .accent { color: var(--lime); }
+.nav-pill {
+  color: var(--muted); font-weight: 600; font-size: .9rem;
+  padding: .4rem .7rem; border-radius: 8px; white-space: nowrap;
+}
+.nav-pill:hover { color: var(--text); background: rgba(255,255,255,.04); }
+.nav-pill .ico { margin-right: .35rem; opacity: .85; }
+
+.balance-pill {
+  background: var(--surface-2); border: 1px solid var(--border);
+  border-radius: 999px; padding: .35rem .85rem; font-weight: 700;
+  color: var(--text); display: inline-flex; align-items: center; gap: .4rem;
+}
+.balance-pill .cur { color: var(--muted); font-weight: 600; font-size: .8rem; }
+
+.btn-deposit {
+  background: linear-gradient(180deg, var(--green), var(--green-2));
+  border: none; color: #08130c; font-weight: 800; letter-spacing: .4px;
+  border-radius: 999px; padding: .5rem 1.4rem; box-shadow: 0 6px 16px rgba(34,197,94,.3);
+}
+.btn-deposit:hover { color: #08130c; filter: brightness(1.06); }
+.avatar-btn {
+  width: 38px; height: 38px; border-radius: 50%; border: 1px solid var(--border);
+  background: var(--surface-2); color: var(--text); display: inline-flex;
+  align-items: center; justify-content: center;
 }
 
-.form-floating > .form-control-plaintext:focus::placeholder, .form-floating > .form-control:focus::placeholder {
-  text-align: start;
+/* ---- Bootstrap surface overrides ---------------------------------------- */
+.card {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius); color: var(--text);
 }
+.table { color: var(--text); }
+.table > :not(caption) > * > * { background: transparent; color: var(--text); border-color: var(--border); }
+.table thead th { color: var(--muted); text-transform: uppercase; font-size: .72rem; letter-spacing: .5px; }
+
+.form-control, .form-select {
+  background: var(--bg-2); border: 1px solid var(--border); color: var(--text);
+  border-radius: 10px; padding: .6rem .8rem;
+}
+.form-control::placeholder { color: #5f7468; }
+.form-control:focus, .form-select:focus {
+  background: var(--bg-2); color: var(--text); border-color: var(--green);
+  box-shadow: 0 0 0 .2rem rgba(34,197,94,.18);
+}
+.form-label { color: var(--muted); font-weight: 600; font-size: .85rem; }
+.form-text { color: #6f8678; }
+.form-select option { background: var(--surface); color: var(--text); }
+
+.btn-primary {
+  background: linear-gradient(180deg, var(--green), var(--green-2));
+  border: none; color: #08130c; font-weight: 700; border-radius: 10px; padding: .6rem 1rem;
+}
+.btn-primary:hover { color: #08130c; filter: brightness(1.06); }
+.btn-outline-primary { color: var(--green); border-color: var(--green); border-radius: 10px; }
+.btn-outline-primary:hover { background: var(--green); color: #08130c; }
+.btn-link { color: var(--muted); }
+.btn-link:hover { color: var(--lime); }
+
+.alert-success { background: rgba(34,197,94,.12); border: 1px solid var(--green-deep); color: #bdf0cf; }
+.alert-danger  { background: rgba(239,68,68,.10); border: 1px solid #7f1d1d; color: #f8c4c4; }
+
+.btn:focus, .btn:active:focus, .form-control:focus, .form-select:focus, .form-check-input:focus {
+  box-shadow: 0 0 0 .2rem rgba(34,197,94,.25);
+}
+
+/* ---- Cashier ------------------------------------------------------------- */
+.cashier {
+  background: linear-gradient(180deg, var(--green-deep) 0, transparent 6px), var(--bg-2);
+  border: 1px solid var(--border); border-radius: 16px; overflow: hidden;
+  box-shadow: 0 18px 50px rgba(0,0,0,.5);
+}
+.cashier-head { background: var(--green-deep); padding: .25rem .25rem 0; }
+.cashier-tabs { display: flex; gap: .25rem; padding: 0 1rem; }
+.cashier-tabs a {
+  color: #cfe9d8; font-weight: 700; padding: .8rem 1.1rem; border: 0;
+  border-bottom: 3px solid transparent; opacity: .8;
+}
+.cashier-tabs a:hover { opacity: 1; color: #fff; }
+.cashier-tabs a.active { color: #fff; opacity: 1; border-bottom-color: var(--lime); }
+.cashier-body { padding: 1.5rem; background: var(--surface); }
+.payment-info { color: var(--muted); border-left: 1px solid var(--border); padding-left: 1.25rem; }
+.payment-info h2 { color: var(--text); }
+
+/* ---- Method tiles -------------------------------------------------------- */
+.method-tiles { display: flex; flex-wrap: wrap; gap: .8rem; }
+.method-tile {
+  background: #fff; color: #111; border-radius: 12px; border: 2px solid transparent;
+  padding: .9rem 1rem; min-width: 150px; cursor: pointer; position: relative;
+  display: flex; flex-direction: column; gap: .5rem; transition: border-color .15s, transform .1s;
+}
+.method-tile .logo { font-weight: 800; font-size: 1.05rem; letter-spacing: .3px; }
+.method-tile .logo .hl { color: var(--green-2); }
+.method-tile .limits { font-size: .72rem; color: #555; line-height: 1.3; }
+.method-tile.active { border-color: var(--green); box-shadow: 0 0 0 3px rgba(34,197,94,.25); }
+.method-tile.selected { border-color: var(--green); }
+.method-tile.disabled {
+  filter: grayscale(.6); opacity: .45; cursor: not-allowed;
+}
+.method-tile.disabled::after {
+  content: "Unavailable"; position: absolute; top: .4rem; right: .5rem;
+  font-size: .6rem; font-weight: 700; color: #b91c1c; text-transform: uppercase;
+}
+.method-meta { color: var(--muted); }
+.method-meta .name { color: var(--text); font-weight: 700; font-size: 1.1rem; }
+
+/* ---- Pay-to card --------------------------------------------------------- */
+.pay-card {
+  background: linear-gradient(135deg, #102a1c, #0c1813);
+  border: 1px solid var(--green-deep); border-radius: 14px; padding: 1.1rem 1.25rem;
+}
+.pay-card .row-kv { display: flex; justify-content: space-between; padding: .4rem 0; border-bottom: 1px dashed var(--border); }
+.pay-card .row-kv:last-child { border-bottom: 0; }
+.pay-card .k { color: var(--muted); font-size: .8rem; text-transform: capitalize; }
+.pay-card .v { color: var(--text); font-weight: 700; }
+
+/* ---- Lobby (mock) -------------------------------------------------------- */
+.hero {
+  border-radius: 16px; overflow: hidden; border: 1px solid var(--border);
+  background:
+    radial-gradient(700px 300px at 85% 30%, rgba(34,197,94,.25), transparent 60%),
+    linear-gradient(120deg, #0e1f16, #0a0f0c);
+  padding: 2.4rem 2rem; position: relative;
+}
+.hero h1 { font-weight: 800; }
+.hero .lime { color: var(--lime); }
+.game-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px,1fr)); gap: 1rem; }
+.game-tile {
+  background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
+  aspect-ratio: 4/3; display: flex; align-items: center; justify-content: center;
+  color: var(--muted); font-weight: 700; text-align: center; transition: transform .12s, border-color .12s;
+}
+.game-tile:hover { transform: translateY(-3px); border-color: var(--green); color: var(--text); }
+
+/* ---- Bonus modal (mock) -------------------------------------------------- */
+.bonus-backdrop {
+  position: fixed; inset: 0; background: rgba(0,0,0,.6); z-index: 1050;
+  display: flex; align-items: center; justify-content: center;
+}
+.bonus-modal {
+  background: var(--green-deep); border-radius: 16px; width: min(460px, 92vw);
+  padding: 1.5rem; text-align: center; border: 1px solid var(--border);
+}
+.bonus-card { background: var(--surface-2); border-radius: 12px; padding: 1rem; margin: .8rem 0; text-align: left; }
+
+/* ---- Footer -------------------------------------------------------------- */
+.footer { position: absolute; bottom: 0; width: 100%; white-space: nowrap; line-height: 60px;
+  border-top: 1px solid var(--border); color: var(--muted); background: var(--bg-2); }

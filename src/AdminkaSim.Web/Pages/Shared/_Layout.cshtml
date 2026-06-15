@@ -1,62 +1,94 @@
+@using AdminkaSim.Web.Data
+@using Microsoft.AspNetCore.Identity
+@using Microsoft.EntityFrameworkCore
+@inject UserManager<SimUser> UserManager
+@inject SimDbContext Db
+@{
+    decimal? headerBalance = null;
+    string? headerCurrency = "TRY";
+    var authed = User.Identity?.IsAuthenticated == true;
+    if (authed)
+    {
+        var uid = UserManager.GetUserId(User);
+        var w = await Db.Wallets.AsNoTracking().FirstOrDefaultAsync(x => x.UserId == uid);
+        headerBalance = w?.Balance;
+        headerCurrency = w?.Currency ?? "TRY";
+    }
+}
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>@ViewData["Title"] - adminka-sim</title>
+    <title>@ViewData["Title"] - SIMBET</title>
     <script type="importmap"></script>
     <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/AdminkaSim.Web.styles.css" asp-append-version="true" />
 </head>
 <body>
-    <header>
-        <nav class="navbar navbar-expand-sm navbar-toggleable-sm navbar-light bg-white border-bottom box-shadow mb-3">
-            <div class="container">
-                <a class="navbar-brand" asp-area="" asp-page="/Index">adminka-sim</a>
-                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target=".navbar-collapse" aria-controls="navbarSupportedContent"
-                        aria-expanded="false" aria-label="Toggle navigation">
+    <header class="site-header">
+        <nav class="navbar navbar-expand-lg py-2">
+            <div class="container-fluid px-3 px-lg-4">
+                <a class="brand-logo me-3" asp-page="/Index">SIM<span class="accent">BET</span></a>
+
+                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#mainNav"
+                        aria-controls="mainNav" aria-expanded="false" aria-label="Toggle navigation">
                     <span class="navbar-toggler-icon"></span>
                 </button>
-                <div class="navbar-collapse collapse d-sm-inline-flex justify-content-between">
-                    <ul class="navbar-nav flex-grow-1">
-                        <li class="nav-item">
-                            <a class="nav-link text-dark" asp-area="" asp-page="/Index">My wallet</a>
-                        </li>
+
+                <div class="collapse navbar-collapse" id="mainNav">
+                    @* Mock nav — static dead links (everything but deposit/withdraw is mocked). *@
+                    <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+                        <li class="nav-item"><a class="nav-pill" href="#" onclick="return false;"><span class="ico">⚽</span>SPORTS</a></li>
+                        <li class="nav-item"><a class="nav-pill" href="#" onclick="return false;"><span class="ico">🔴</span>LIVE</a></li>
+                        <li class="nav-item"><a class="nav-pill" href="#" onclick="return false;"><span class="ico">🎰</span>SLOTS</a></li>
+                        <li class="nav-item"><a class="nav-pill" href="#" onclick="return false;"><span class="ico">🃏</span>LIVE CASINO</a></li>
+                        <li class="nav-item"><a class="nav-pill" href="#" onclick="return false;"><span class="ico">📺</span>TV GAMES</a></li>
                     </ul>
-                    <ul class="navbar-nav">
-                        @if (User.Identity?.IsAuthenticated == true)
+
+                    <ul class="navbar-nav align-items-lg-center gap-2">
+                        @if (authed)
                         {
                             <li class="nav-item">
-                                <span class="nav-link text-dark">@User.Identity!.Name</span>
+                                <span class="balance-pill">@((headerBalance ?? 0m).ToString("N2")) <span class="cur">@headerCurrency</span></span>
                             </li>
                             <li class="nav-item">
-                                <form class="form-inline" asp-page="/Account/Logout" method="post">
-                                    <button type="submit" class="nav-link btn btn-link text-dark">Log out</button>
-                                </form>
+                                <a class="btn-deposit" asp-page="/Deposit">DEPOSIT</a>
+                            </li>
+                            <li class="nav-item dropdown">
+                                <a class="avatar-btn" href="#" data-bs-toggle="dropdown" aria-expanded="false">👤</a>
+                                <ul class="dropdown-menu dropdown-menu-end">
+                                    <li><span class="dropdown-item-text text-muted small">@User.Identity!.Name</span></li>
+                                    <li><a class="dropdown-item" asp-page="/Index">My account</a></li>
+                                    <li><a class="dropdown-item" asp-page="/History">Transactions</a></li>
+                                    <li><hr class="dropdown-divider" /></li>
+                                    <li>
+                                        <form asp-page="/Account/Logout" method="post" class="px-2">
+                                            <button type="submit" class="btn btn-sm btn-outline-primary w-100">Log out</button>
+                                        </form>
+                                    </li>
+                                </ul>
                             </li>
                         }
                         else
                         {
-                            <li class="nav-item">
-                                <a class="nav-link text-dark" asp-area="" asp-page="/Account/Login">Log in</a>
-                            </li>
+                            <li class="nav-item"><a class="btn-deposit" asp-page="/Account/Login">LOGIN</a></li>
                         }
                     </ul>
                 </div>
             </div>
         </nav>
     </header>
-    <div class="container">
+
+    <div class="container py-4">
         <main role="main" class="pb-3">
             @RenderBody()
         </main>
     </div>
 
-    <footer class="border-top footer text-muted">
-        <div class="container">
-            &copy; 2026 - adminka-sim
-        </div>
+    <footer class="footer text-center">
+        <div class="container">SIMBET — demo casino (adminka-sim) · &copy; 2026</div>
     </footer>
 
     <script src="~/lib/jquery/dist/jquery.min.js"></script>

@@ -4,60 +4,103 @@
     ViewData["Title"] = "Deposit";
 }
 
-<div class="row">
-    <div class="col-md-6">
-        <h1 class="h3 mb-3">Deposit</h1>
+<div class="cashier">
+    <div class="cashier-head">
+        <partial name="_CashierTabs" />
+    </div>
+    <div class="cashier-body">
+        <partial name="_MethodTiles" />
 
-        <form method="post" class="mb-4">
-            <div asp-validation-summary="ModelOnly" class="text-danger"></div>
-            <div class="mb-3">
-                <label asp-for="Amount" class="form-label">Amount (TRY)</label>
-                <input asp-for="Amount" class="form-control" type="number" step="0.01" min="0.01" />
-                <span asp-validation-for="Amount" class="text-danger"></span>
-            </div>
-            <div class="mb-3">
-                <label asp-for="Method" class="form-label">Method</label>
-                <input asp-for="Method" class="form-control" />
-                <div class="form-text">Havale = <code>transfer</code> (needs a bank below).</div>
-            </div>
-            <div class="mb-3">
-                <label asp-for="BankId" class="form-label">Bank (for Havale)</label>
-                <select asp-for="BankId" class="form-select">
-                    <option value="">— select a bank —</option>
-                    @foreach (var b in Model.Banks)
-                    {
-                        <option value="@b.Id">@b.Name@(b.DepositMin is not null ? $" ({b.DepositMin:0}–{b.DepositMax:0} TRY)" : "")</option>
-                    }
-                </select>
-                <span asp-validation-for="BankId" class="text-danger"></span>
-                @if (Model.Banks.Count == 0)
+        <div class="row g-4">
+            <div class="col-lg-7">
+                <div class="method-meta mb-3">
+                    <div class="name">AdminkaPay Havale</div>
+                    <span class="text-muted">Min: <strong>@PaymentMethods.MinAmount.ToString("N0") TRY</strong>
+                        &nbsp;·&nbsp; Max: <strong>@PaymentMethods.MaxAmount.ToString("N0") TRY</strong></span>
+                </div>
+
+                <form method="post" class="mb-2">
+                    <div asp-validation-summary="ModelOnly" class="text-danger mb-2"></div>
+                    <input type="hidden" asp-for="Method" />
+
+                    <div class="mb-3">
+                        <label asp-for="Amount" class="form-label">Amount</label>
+                        <div class="input-group">
+                            <input asp-for="Amount" class="form-control" type="number" step="1" min="100" max="100000" />
+                            <span class="input-group-text">TRY</span>
+                        </div>
+                        <span asp-validation-for="Amount" class="text-danger"></span>
+                    </div>
+
+                    <div class="mb-3">
+                        <label asp-for="BankId" class="form-label">Bank</label>
+                        <select asp-for="BankId" class="form-select">
+                            <option value="">— select a bank —</option>
+                            @foreach (var b in Model.Banks)
+                            {
+                                <option value="@b.Id">@b.Name@(b.DepositMin is not null ? $" ({b.DepositMin:0}–{b.DepositMax:0} TRY)" : "")</option>
+                            }
+                        </select>
+                        <span asp-validation-for="BankId" class="text-danger"></span>
+                        @if (Model.Banks.Count == 0)
+                        {
+                            <div class="form-text text-warning">No banks available from the gateway right now.</div>
+                        }
+                    </div>
+
+                    <button type="submit" class="btn btn-primary px-4">Deposit</button>
+                </form>
+
+                @if (Model.ResultMessage is not null)
                 {
-                    <div class="form-text text-warning">No banks available from adminka for this merchant.</div>
+                    <div class="alert @(Model.ResultSuccess ? "alert-success" : "alert-danger") mt-3">@Model.ResultMessage</div>
+                }
+
+                @if (Model.PayToAccount is { Count: > 0 })
+                {
+                    <h2 class="h6 text-muted mt-4 mb-2">Send your Havale to</h2>
+                    <div class="pay-card">
+                        @foreach (var kv in Model.PayToAccount)
+                        {
+                            <div class="row-kv"><span class="k">@kv.Key</span><span class="v">@kv.Value</span></div>
+                        }
+                    </div>
                 }
             </div>
-            <button type="submit" class="btn btn-primary">Start deposit</button>
-            <a asp-page="/Index" class="btn btn-link">Back to wallet</a>
-        </form>
 
-        @if (Model.ResultMessage is not null)
-        {
-            <div class="alert @(Model.ResultSuccess ? "alert-success" : "alert-danger")">@Model.ResultMessage</div>
-        }
-
-        @if (Model.PayToAccount is { Count: > 0 })
-        {
-            <h2 class="h5">Pay to</h2>
-            <table class="table table-sm">
-                <tbody>
-                    @foreach (var kv in Model.PayToAccount)
-                    {
-                        <tr><th class="text-muted">@kv.Key</th><td>@kv.Value</td></tr>
-                    }
-                </tbody>
-            </table>
-        }
+            <div class="col-lg-5">
+                <div class="payment-info">
+                    <h2 class="h6">Payment Info</h2>
+                    <p>Our Turkey Fast Bank Transfer (Havale) ensures quick, hassle-free deposits.
+                       Enter an amount, pick your bank, and you'll get a pool account to send to.
+                       Your balance updates once an operator approves and the confirmation callback lands.</p>
+                </div>
+            </div>
+        </div>
     </div>
 </div>
+
+@* Bonus Request — mock modal (everything but deposit/withdraw is mocked).
+   Only on the initial view, not after a deposit attempt. *@
+@if (Model.ResultMessage is null)
+{
+<div class="bonus-backdrop" id="bonusBackdrop">
+    <div class="bonus-modal">
+        <div style="font-size:2rem">🎁</div>
+        <h2 class="h5 mt-2">Bonus Request</h2>
+        <p class="text-muted">Please select a bonus to receive a reward</p>
+        <div class="bonus-card">
+            <div class="d-flex justify-content-between"><strong>%100 Casino Yatırım Bonusu</strong><span class="text-muted small">WAGERING</span></div>
+            <button type="button" class="btn btn-primary w-100 mt-2" onclick="document.getElementById('bonusBackdrop').style.display='none'">SELECT BONUS</button>
+        </div>
+        <div class="bonus-card">
+            <div class="d-flex justify-content-between"><strong>%25 Çevrimli Spor Yatırım Bonusu</strong><span class="text-muted small">WAGERING</span></div>
+            <button type="button" class="btn btn-primary w-100 mt-2" onclick="document.getElementById('bonusBackdrop').style.display='none'">SELECT BONUS</button>
+        </div>
+        <button type="button" class="btn btn-link w-100" onclick="document.getElementById('bonusBackdrop').style.display='none'">Deposit without reward</button>
+    </div>
+</div>
+}
 
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />

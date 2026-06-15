@@ -1,0 +1,11 @@
+@{
+    // Highlight the active tab from the current page route — lets the three
+    // cashier pages share one tab strip without merging their page models.
+    var page = (ViewContext.RouteData.Values["page"] as string) ?? "";
+    string Cls(string p) => string.Equals(page, p, StringComparison.OrdinalIgnoreCase) ? "active" : "";
+}
+<div class="cashier-tabs">
+    <a class="@Cls("/Deposit")" asp-page="/Deposit">Deposits</a>
+    <a class="@Cls("/Withdraw")" asp-page="/Withdraw">Withdrawals</a>
+    <a class="@Cls("/History")" asp-page="/History">Transactions History</a>
+</div>

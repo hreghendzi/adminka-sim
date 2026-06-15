@@ -1,0 +1,18 @@
+@using AdminkaSim.Web
+@{
+    // jumpobet-style method tiles. Only Havale/FASTPAY is active + selected;
+    // the rest are rendered but disabled (owner decision: Havale-only wave).
+}
+<div class="method-tiles mb-4">
+    @foreach (var m in PaymentMethods.All)
+    {
+        <div class="method-tile @(m.Active ? "active selected" : "disabled")"
+             title="@(m.Active ? "Selected" : "Unavailable in this demo")">
+            <div class="logo">@m.Name</div>
+            <div class="limits">
+                Min: <strong>@m.Min.ToString("N0") TRY</strong><br />
+                Max: <strong>@m.Max.ToString("N0") TRY</strong>
+            </div>
+        </div>
+    }
+</div>

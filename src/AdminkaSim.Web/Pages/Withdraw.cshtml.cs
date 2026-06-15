@@ -18,21 +18,19 @@ public sealed class WithdrawModel(
     WalletService wallet) : PageModel
 {
     [BindProperty]
-    [Range(0.01, 1_000_000)]
+    [Range(100, 100_000, ErrorMessage = "Amount must be between 100 and 100,000 TRY.")]
     public decimal Amount { get; set; }
 
     [BindProperty]
     public string Method { get; set; } = "transfer";
 
     [BindProperty]
-    [Required]
-    public string Iban { get; set; } = "";
-
-    [BindProperty]
+    [Required(ErrorMessage = "Select your bank.")]
     public string? BankName { get; set; }
 
     [BindProperty]
-    public string? BankBranch { get; set; }
+    [Required]
+    public string Iban { get; set; } = "";
 
     public decimal Balance { get; private set; }
     public string? ResultMessage { get; private set; }
@@ -43,6 +41,13 @@ public sealed class WithdrawModel(
     public async Task<IActionResult> OnPostAsync(CancellationToken ct)
     {
         await LoadBalanceAsync(ct);
+
+        // Amount is whole TRY (adminka types amount as int — integration-check #2).
+        if (Amount != decimal.Truncate(Amount))
+        {
+            ModelState.AddModelError(nameof(Amount), "Amount must be a whole number of TRY.");
+        }
+
         if (!ModelState.IsValid)
         {
             return Page();
@@ -62,9 +67,12 @@ public sealed class WithdrawModel(
         }
 
         var userCode = LocalPart(user.Email) ?? user.Id;
+        // jumpobet collects only bank + IBAN (no branch). adminka still requires a
+        // bankBranch for a transfer withdraw, so we send a placeholder "-" rather
+        // than change the contract (owner decision §6.1 — no adminka change).
         var (result, _) = await wallet.StartWithdrawAsync(
             w, userCode, user.DisplayName ?? userCode, Amount, Method,
-            account: Iban, iban: Iban, bankName: BankName, bankBranch: BankBranch, ct);
+            account: Iban, iban: Iban, bankName: BankName, bankBranch: "-", ct);
 
         ResultSuccess = result.Success;
         ResultMessage = result.Success

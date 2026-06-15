@@ -1,0 +1,68 @@
+@page
+@model HistoryModel
+@{
+    ViewData["Title"] = "Transactions History";
+}
+
+<div class="cashier">
+    <div class="cashier-head">
+        <partial name="_CashierTabs" />
+    </div>
+    <div class="cashier-body">
+        <form method="get" class="row g-3 align-items-end mb-4">
+            <div class="col-6 col-md-3">
+                <label asp-for="From" class="form-label">From</label>
+                <input asp-for="From" type="date" class="form-control" />
+            </div>
+            <div class="col-6 col-md-3">
+                <label asp-for="To" class="form-label">To</label>
+                <input asp-for="To" type="date" class="form-control" />
+            </div>
+            <div class="col-8 col-md-3">
+                <label asp-for="Type" class="form-label">Transaction Type</label>
+                <select asp-for="Type" class="form-select">
+                    <option value="all">All</option>
+                    <option value="deposit">Deposits</option>
+                    <option value="withdraw">Withdrawals</option>
+                </select>
+            </div>
+            <div class="col-4 col-md-3">
+                <button type="submit" class="btn btn-primary w-100">Show</button>
+            </div>
+        </form>
+
+        @if (Model.Rows.Count == 0)
+        {
+            <div class="text-center text-muted py-5">
+                <div style="font-size:2rem">🗂️</div>
+                <h2 class="h6 mt-2">No Data</h2>
+                <p class="mb-0">No transactions for this period.</p>
+            </div>
+        }
+        else
+        {
+            <table class="table align-middle">
+                <thead>
+                    <tr><th>When</th><th>Type</th><th>Amount</th><th>Status</th><th>Reference</th></tr>
+                </thead>
+                <tbody>
+                    @foreach (var l in Model.Rows)
+                    {
+                        <tr>
+                            <td>@l.CreatedAt.LocalDateTime.ToString("yyyy-MM-dd HH:mm")</td>
+                            <td>@l.Direction</td>
+                            <td>@l.Amount.ToString("N2") @l.Currency</td>
+                            <td>
+                                <span class="badge @(l.Status switch {
+                                    LedgerStatus.Confirmed => "bg-success",
+                                    LedgerStatus.Pending => "bg-warning text-dark",
+                                    _ => "bg-secondary" })">@l.Status</span>
+                            </td>
+                            <td class="text-muted small">@(l.AdminkaTxId ?? l.MerchantTxId)</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
+    </div>
+</div>
