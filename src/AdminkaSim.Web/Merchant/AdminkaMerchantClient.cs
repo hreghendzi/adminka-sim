@@ -16,7 +16,8 @@ public sealed record MerchantStartResult(
     string? Message,
     string? PublicTxId,
     IReadOnlyDictionary<string, string?> Account,
-    string RawJson);
+    string RawJson,
+    string? PaymentUrl = null);
 
 /// <summary>Result of a read/command action (<c>status</c>, <c>cancel</c>).</summary>
 public sealed record MerchantActionResult(bool Success, string? StatusCode, string? Message, string RawJson);
@@ -149,6 +150,7 @@ public sealed class AdminkaMerchantClient(HttpClient http, IOptions<AdminkaMerch
         var (success, statusCode, message) = ReadEnvelopeHead(root);
 
         string? publicTxId = null;
+        string? paymentUrl = null;
         var account = new Dictionary<string, string?>(StringComparer.Ordinal);
         if (root is { ValueKind: JsonValueKind.Object } r
             && r.TryGetProperty("data", out var data)
@@ -159,6 +161,14 @@ public sealed class AdminkaMerchantClient(HttpClient http, IOptions<AdminkaMerch
             if (txn.TryGetProperty("id", out var idEl))
             {
                 publicTxId = idEl.ToString();
+            }
+
+            // §3.4 hosted mode: when adminka has the hosted flag on, the deposit-start
+            // response carries an absolute paymentUrl (AdminkaPay /account?ref=). Absent
+            // otherwise (inline model). When present, the sim redirects the player to it.
+            if (txn.TryGetProperty("paymentUrl", out var pu) && pu.ValueKind == JsonValueKind.String)
+            {
+                paymentUrl = pu.GetString();
             }
 
             // Deposit: account is a nested pool-account OBJECT; withdraw: a STRING (memory add2f689).
@@ -178,7 +188,7 @@ public sealed class AdminkaMerchantClient(HttpClient http, IOptions<AdminkaMerch
             }
         }
 
-        return new MerchantStartResult(success, statusCode, message, publicTxId, account, raw);
+        return new MerchantStartResult(success, statusCode, message, publicTxId, account, raw, paymentUrl);
     }
 
     private async Task<MerchantActionResult> ActionAsync(string path, string action, string publicTxId, CancellationToken ct)

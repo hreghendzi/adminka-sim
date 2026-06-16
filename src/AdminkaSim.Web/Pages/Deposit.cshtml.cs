@@ -75,6 +75,15 @@ public sealed class DepositModel(
         var userCode = LocalPart(user.Email) ?? user.Id;
         var (result, _) = await wallet.StartDepositAsync(w, userCode, user.DisplayName ?? userCode, Amount, Method, BankId, ct);
 
+        // §3.4 hosted mode: when adminka returns a paymentUrl (AdminkaPay portal), hand the
+        // player off to it — the portal shows the pool account + countdown (mirrors how a real
+        // merchant redirects to FASTPAY). The Pending ledger entry is already created; the
+        // wallet still settles only on the hash-verified webhook callback.
+        if (result.Success && !string.IsNullOrWhiteSpace(result.PaymentUrl))
+        {
+            return Redirect(result.PaymentUrl);
+        }
+
         ResultSuccess = result.Success;
         if (result.Success)
         {
