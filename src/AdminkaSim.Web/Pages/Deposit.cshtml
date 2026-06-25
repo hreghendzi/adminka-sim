@@ -19,7 +19,13 @@
                         &nbsp;·&nbsp; Max: <strong>@PaymentMethods.MaxAmount.ToString("N0") TRY</strong></span>
                 </div>
 
-                <form method="post" class="mb-2">
+                @* §3.4 hosted-mode: mirror FASTPAY/jumpobet — open the AdminkaPay hosted
+                   page in a NEW TAB (target="_blank") so the casino stays put, exactly like
+                   jumpobet's window.open to deposit.fastpayrest.xyz (audit §2 line 50).
+                   target="_blank" on a real form submit is a user-gesture navigation, so it
+                   is NOT popup-blocked; the casino tab is unchanged and the pool IBAN +
+                   countdown + "I've paid" render in the provider tab. *@
+                <form method="post" target="_blank" class="mb-2">
                     <div asp-validation-summary="ModelOnly" class="text-danger mb-2"></div>
                     <input type="hidden" asp-for="Method" />
 
@@ -34,7 +40,10 @@
 
                     <div class="mb-3">
                         <label asp-for="BankId" class="form-label">Bank</label>
-                        <select asp-for="BankId" class="form-select">
+                        @* required → client-side block so the new tab opens only on a valid
+                           submit (transfer/Havale always needs a bank). Server-side check in
+                           OnPostAsync remains the backstop. *@
+                        <select asp-for="BankId" class="form-select" required>
                             <option value="">— select a bank —</option>
                             @foreach (var b in Model.Banks)
                             {
@@ -49,6 +58,7 @@
                     </div>
 
                     <button type="submit" class="btn btn-primary px-4">Deposit</button>
+                    <div class="form-text">The AdminkaPay payment page opens in a new tab.</div>
                 </form>
 
                 @if (Model.ResultMessage is not null)
