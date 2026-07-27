@@ -89,40 +89,64 @@ public sealed partial class WalletService(
     /// </summary>
     public async Task<CallbackOutcome> ProcessCallbackAsync(AdminkaCallbackBody body, CancellationToken ct = default)
     {
-        // 1) Verify authenticity BEFORE anything touches the ledger (plan §3.1.2a).
+        // 1) Verify authenticity BEFORE anything touches the ledger (§13, plan §3.1.2a).
         var expected = MerchantHash.Md5Hex(_o.Mid, _o.CallbackUrl, _o.SecretKey);
         if (!MerchantHash.ConstantTimeEquals(expected, body.Hash ?? ""))
         {
-            LogHashInvalid(logger, body.Transaction?.MerchantTxId ?? "(none)");
+            // Log whichever settlement key the sender used — the strict wire has no merchantTxId.
+            LogHashInvalid(logger, body.Transaction?.ClientId ?? body.Transaction?.MerchantTxId ?? "(none)");
             return CallbackOutcome.HashInvalid;
         }
 
         var tx = body.Transaction;
+        if (tx is null)
+        {
+            LogNotFound(logger, "(none)");
+            return CallbackOutcome.NotFound;
+        }
+
+        // 2) Settlement key, clientId-first. Both names carry the SAME value: the
+        // sim's own generated id, sent as `transactionId` and echoed back by adminka
+        // as `clientId` (strict FASTPAY shape, byte-parity plan §4 A1) or as
+        // `merchantTxId` (today's shape). Only the SOURCE of the key changes here —
+        // the ledger column stays MerchantTxId. Team memory 068f6f15: this wire has
+        // trivially-confusable id fields, so the mapping is explicit, never inferred.
+        var key = string.IsNullOrWhiteSpace(tx.ClientId) ? tx.MerchantTxId : tx.ClientId;
+        if (string.IsNullOrWhiteSpace(key))
+        {
+            LogNotFound(logger, "(none)");
+            return CallbackOutcome.NotFound;
+        }
+
         var entry = await db.WalletLedger
             .Include(l => l.Wallet)
-            .FirstOrDefaultAsync(l => l.MerchantTxId == tx.MerchantTxId, ct)
+            .FirstOrDefaultAsync(l => l.MerchantTxId == key, ct)
             .ConfigureAwait(false);
 
         if (entry is null)
         {
-            LogNotFound(logger, tx.MerchantTxId);
+            LogNotFound(logger, key);
             return CallbackOutcome.NotFound;
         }
 
-        // 2) Idempotency — webhook re-delivery for a settled entry is a no-op.
+        // 3) Idempotency — webhook re-delivery for a settled entry is a no-op (§13).
         if (entry.Status != LedgerStatus.Pending)
         {
             return CallbackOutcome.AlreadyProcessed;
         }
 
-        entry.AdminkaTxId ??= tx.Id.ToString();
+        entry.AdminkaTxId ??= tx.Id;
         entry.UpdatedAt = DateTimeOffset.UtcNow;
 
         switch (tx.Status)
         {
             case AdminkaCallbackTransaction.StatusConfirmed:
                 entry.Status = LedgerStatus.Confirmed;
-                var effective = tx.ConfirmedAmount ?? tx.Amount;   // §3.2 partial-approval (deposit) → ConfirmedAmount
+                // §3.2 partial-approval (deposit) → ConfirmedAmount. The coalesce also
+                // absorbs byte-parity plan §4 A6, which makes `confirmedAmount: null`
+                // the normal terminal-unconfirmed value; on Confirmed adminka always
+                // sends a value, so the fallback to Amount is a safety net only.
+                var effective = tx.ConfirmedAmount ?? tx.Amount;
                 entry.Amount = effective;
                 entry.Wallet.Balance += entry.Direction == LedgerDirection.Deposit ? effective : -effective;
                 break;
@@ -134,12 +158,12 @@ public sealed partial class WalletService(
                 break;
             default:
                 // status 0 (pending) is never sent on the wire (§13); ignore anything unexpected.
-                LogUnexpectedStatus(logger, tx.MerchantTxId, tx.Status);
+                LogUnexpectedStatus(logger, key, tx.Status);
                 return CallbackOutcome.AlreadyProcessed;
         }
 
         await db.SaveChangesAsync(ct).ConfigureAwait(false);
-        LogApplied(logger, tx.MerchantTxId, entry.Status, entry.Wallet.Balance);
+        LogApplied(logger, key, entry.Status, entry.Wallet.Balance);
         return CallbackOutcome.Accepted;
     }
 

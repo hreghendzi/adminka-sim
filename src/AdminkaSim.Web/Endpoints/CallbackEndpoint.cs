@@ -1,3 +1,4 @@
+using System.Text.Json;
 using AdminkaSim.Web.Merchant;
 using AdminkaSim.Web.Wallet;
 
@@ -9,15 +10,52 @@ namespace AdminkaSim.Web.Endpoints;
 /// (gotcha 55ba362e). A machine-to-machine JSON POST: authenticated by the v1
 /// hash (verified in <see cref="WalletService.ProcessCallbackAsync"/>), so it is
 /// <c>AllowAnonymous</c> w.r.t. cookie auth and not a browser form (no antiforgery).
+/// <para>
+/// The body is read RAW and logged verbatim before deserialization: adminka's
+/// webhook_delivery stores only the merchant's <i>response</i> excerpt, so this
+/// log line is the only byte-level record of what the wire actually delivered —
+/// the evidence the byte-parity plan's §8 E2E matrix compares across phases
+/// (Phase-0 baseline anomaly #3). Deserialization mirrors the previous
+/// model-binding behaviour: default Web JSON options, 400 on malformed JSON.
+/// </para>
 /// </summary>
-public static class CallbackEndpoint
+public static partial class CallbackEndpoint
 {
+    private static readonly JsonSerializerOptions WebJson = new(JsonSerializerDefaults.Web);
+
     public static IEndpointConventionBuilder MapAdminkaCallback(this IEndpointRouteBuilder app) =>
         app.MapPost("/callback", async (
-                AdminkaCallbackBody body,
+                HttpRequest request,
                 WalletService wallet,
+                ILoggerFactory loggerFactory,
                 CancellationToken ct) =>
             {
+                var logger = loggerFactory.CreateLogger("AdminkaSim.Web.Endpoints.CallbackEndpoint");
+
+                string raw;
+                using (var reader = new StreamReader(request.Body))
+                {
+                    raw = await reader.ReadToEndAsync(ct).ConfigureAwait(false);
+                }
+
+                LogRawCallback(logger, raw);
+
+                AdminkaCallbackBody? body;
+                try
+                {
+                    body = JsonSerializer.Deserialize<AdminkaCallbackBody>(raw, WebJson);
+                }
+                catch (JsonException)
+                {
+                    body = null;
+                }
+
+                if (body is null)
+                {
+                    // Same visible behaviour a model-binding failure produced before.
+                    return Results.BadRequest(new { received = false, reason = "malformed body" });
+                }
+
                 var outcome = await wallet.ProcessCallbackAsync(body, ct).ConfigureAwait(false);
                 return outcome switch
                 {
@@ -35,4 +73,7 @@ public static class CallbackEndpoint
             })
             .AllowAnonymous()
             .WithName("AdminkaMerchantCallback");
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Adminka callback raw body: {RawBody}")]
+    private static partial void LogRawCallback(ILogger logger, string rawBody);
 }

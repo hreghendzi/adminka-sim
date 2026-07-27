@@ -14,7 +14,10 @@ namespace AdminkaSim.Tests;
 /// </summary>
 public class WalletCallbackTests
 {
-    private static (WalletService Svc, SimDbContext Db, AdminkaMerchantOptions O) NewService()
+    // internal (not private): CallbackShapeTests.cs (byte-level wire-shape
+    // tests, plan WS-B.1) reuses these three harness helpers rather than
+    // duplicating them.
+    internal static (WalletService Svc, SimDbContext Db, AdminkaMerchantOptions O) NewService()
     {
         var db = new SimDbContext(new DbContextOptionsBuilder<SimDbContext>()
             .UseInMemoryDatabase(Guid.NewGuid().ToString("N"))
@@ -31,7 +34,7 @@ public class WalletCallbackTests
         return (svc, db, o);
     }
 
-    private static Guid SeedWallet(SimDbContext db, decimal balance)
+    internal static Guid SeedWallet(SimDbContext db, decimal balance)
     {
         var w = new Wallet { Id = Guid.NewGuid(), UserId = "u1", Currency = "TRY", Balance = balance, CreatedAt = DateTimeOffset.UtcNow };
         db.Wallets.Add(w);
@@ -39,7 +42,7 @@ public class WalletCallbackTests
         return w.Id;
     }
 
-    private static void SeedPending(SimDbContext db, Guid walletId, string txid, LedgerDirection dir, decimal amount)
+    internal static void SeedPending(SimDbContext db, Guid walletId, string txid, LedgerDirection dir, decimal amount)
     {
         db.WalletLedger.Add(new WalletLedgerEntry
         {
@@ -60,7 +63,18 @@ public class WalletCallbackTests
         AdminkaMerchantOptions o, string txid, short status, decimal amount,
         decimal? confirmed = null, short direction = 0, string? hash = null)
         => new(
-            new AdminkaCallbackTransaction(Guid.NewGuid(), txid, status, "x", direction, amount, confirmed, "TRY", DateTimeOffset.UtcNow),
+            new AdminkaCallbackTransaction
+            {
+                Id = Guid.NewGuid().ToString(),
+                MerchantTxId = txid,          // OLD-shape path: settles via merchantTxId, not clientId.
+                Status = status,
+                StatusText = "x",
+                Direction = direction,
+                Amount = amount,
+                ConfirmedAmount = confirmed,
+                Currency = "TRY",
+                OccurredAt = DateTimeOffset.UtcNow,
+            },
             hash ?? MerchantHash.Md5Hex(o.Mid, o.CallbackUrl, o.SecretKey));
 
     [Fact]
