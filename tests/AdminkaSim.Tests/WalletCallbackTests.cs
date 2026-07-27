@@ -61,19 +61,17 @@ public class WalletCallbackTests
 
     private static AdminkaCallbackBody Callback(
         AdminkaMerchantOptions o, string txid, short status, decimal amount,
-        decimal? confirmed = null, short direction = 0, string? hash = null)
+        decimal? confirmed = null, string? hash = null)
         => new(
             new AdminkaCallbackTransaction
             {
                 Id = Guid.NewGuid().ToString(),
-                MerchantTxId = txid,          // OLD-shape path: settles via merchantTxId, not clientId.
+                ClientId = txid,          // Strict path: settles via clientId, not merchantTxId (business-logic.md §13).
                 Status = status,
                 StatusText = "x",
-                Direction = direction,
                 Amount = amount,
                 ConfirmedAmount = confirmed,
                 Currency = "TRY",
-                OccurredAt = DateTimeOffset.UtcNow,
             },
             hash ?? MerchantHash.Md5Hex(o.Mid, o.CallbackUrl, o.SecretKey));
 
@@ -164,7 +162,7 @@ public class WalletCallbackTests
         var wid = SeedWallet(db, 100m);
         SeedPending(db, wid, "tx1", LedgerDirection.Withdraw, 40m);
 
-        await svc.ProcessCallbackAsync(Callback(o, "tx1", 1, 40m, direction: 1));
+        await svc.ProcessCallbackAsync(Callback(o, "tx1", 1, 40m));
 
         Assert.Equal(60m, (await db.Wallets.FirstAsync()).Balance);
     }

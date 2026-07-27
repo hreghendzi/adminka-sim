@@ -13,7 +13,11 @@ public enum CallbackOutcome
     Accepted,
     /// <summary>Hash did not verify — wallet NOT touched (plan §3.1.2a).</summary>
     HashInvalid,
-    /// <summary>No matching pending ledger entry for the merchantTxId.</summary>
+    /// <summary>
+    /// No matching pending ledger entry: the lookup is keyed on the callback's
+    /// <c>clientId</c> (§13), matched against the ledger's
+    /// <c>WalletLedgerEntry.MerchantTxId</c> column.
+    /// </summary>
     NotFound,
     /// <summary>Entry was already in a terminal state — idempotent no-op (webhook re-delivery).</summary>
     AlreadyProcessed,
@@ -93,8 +97,8 @@ public sealed partial class WalletService(
         var expected = MerchantHash.Md5Hex(_o.Mid, _o.CallbackUrl, _o.SecretKey);
         if (!MerchantHash.ConstantTimeEquals(expected, body.Hash ?? ""))
         {
-            // Log whichever settlement key the sender used — the strict wire has no merchantTxId.
-            LogHashInvalid(logger, body.Transaction?.ClientId ?? body.Transaction?.MerchantTxId ?? "(none)");
+            // clientId is the only settlement key on the strict wire (§13) — log it.
+            LogHashInvalid(logger, body.Transaction?.ClientId ?? "(none)");
             return CallbackOutcome.HashInvalid;
         }
 
@@ -105,13 +109,27 @@ public sealed partial class WalletService(
             return CallbackOutcome.NotFound;
         }
 
-        // 2) Settlement key, clientId-first. Both names carry the SAME value: the
-        // sim's own generated id, sent as `transactionId` and echoed back by adminka
-        // as `clientId` (strict FASTPAY shape, byte-parity plan §4 A1) or as
-        // `merchantTxId` (today's shape). Only the SOURCE of the key changes here —
-        // the ledger column stays MerchantTxId. Team memory 068f6f15: this wire has
-        // trivially-confusable id fields, so the mapping is explicit, never inferred.
-        var key = string.IsNullOrWhiteSpace(tx.ClientId) ? tx.MerchantTxId : tx.ClientId;
+        // 2) Settlement key = clientId, and ONLY clientId (§13 gate G2: the strict
+        // FASTPAY v1.1 body dropped merchantTxId; a consumer that keyed on it
+        // migrates to clientId, which carries the SAME value).
+        //
+        // The id mapping, spelled out rather than inferred: the sim generates its
+        // own id, sends it to adminka as the `transactionId` REQUEST parameter, and
+        // adminka echoes it back as `clientId` on the callback. Only the WIRE SOURCE
+        // of the key changed — the local ledger column is still
+        // WalletLedgerEntry.MerchantTxId and the database is unchanged (no migration).
+        // Team memory 068f6f15: merchant-supplied ids (transactionId / merchantTxId)
+        // and server-issued ids (txId / clientId… and adminka's public id, memory
+        // c6a9d7e8, which is the server-generated UUID surfaced as transaction.id)
+        // are trivially confused on this wire — that exact confusion already shipped
+        // a wrong-hash-input bug once.
+        var key = tx.ClientId;
+
+        // A body with no clientId is a wire REGRESSION toward the pre-G2 shape, not
+        // a routine miss: it falls through to NotFound, which CallbackEndpoint maps
+        // to HTTP 404, which drives adminka's §13 retry ladder into the DLQ. That
+        // loud, visible failure IS the canary property of this simulator — never
+        // soften it with a fallback key.
         if (string.IsNullOrWhiteSpace(key))
         {
             LogNotFound(logger, "(none)");
@@ -183,15 +201,15 @@ public sealed partial class WalletService(
             UpdatedAt = DateTimeOffset.UtcNow,
         };
 
-    [LoggerMessage(EventId = 7001, Level = LogLevel.Warning, Message = "Callback hash invalid for merchantTxId {MerchantTxId}; wallet not touched")]
-    private static partial void LogHashInvalid(ILogger logger, string merchantTxId);
+    [LoggerMessage(EventId = 7001, Level = LogLevel.Warning, Message = "Callback hash invalid for clientId {ClientId}; wallet not touched")]
+    private static partial void LogHashInvalid(ILogger logger, string clientId);
 
-    [LoggerMessage(EventId = 7002, Level = LogLevel.Warning, Message = "Callback for unknown merchantTxId {MerchantTxId}")]
-    private static partial void LogNotFound(ILogger logger, string merchantTxId);
+    [LoggerMessage(EventId = 7002, Level = LogLevel.Warning, Message = "Callback for unknown clientId {ClientId}")]
+    private static partial void LogNotFound(ILogger logger, string clientId);
 
-    [LoggerMessage(EventId = 7003, Level = LogLevel.Warning, Message = "Callback for {MerchantTxId} had unexpected status {Status}")]
-    private static partial void LogUnexpectedStatus(ILogger logger, string merchantTxId, short status);
+    [LoggerMessage(EventId = 7003, Level = LogLevel.Warning, Message = "Callback for {ClientId} had unexpected status {Status}")]
+    private static partial void LogUnexpectedStatus(ILogger logger, string clientId, short status);
 
-    [LoggerMessage(EventId = 7004, Level = LogLevel.Information, Message = "Callback applied: {MerchantTxId} -> {Status}; wallet balance now {Balance}")]
-    private static partial void LogApplied(ILogger logger, string merchantTxId, LedgerStatus status, decimal balance);
+    [LoggerMessage(EventId = 7004, Level = LogLevel.Information, Message = "Callback applied: {ClientId} -> {Status}; wallet balance now {Balance}")]
+    private static partial void LogApplied(ILogger logger, string clientId, LedgerStatus status, decimal balance);
 }

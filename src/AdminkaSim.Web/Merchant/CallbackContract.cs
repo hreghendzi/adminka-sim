@@ -21,25 +21,36 @@ public sealed record AdminkaCallbackBody(
     [property: JsonPropertyName("hash")] string Hash);
 
 /// <summary>
-/// The merchant-facing transaction summary embedded in a callback, bound
-/// <b>tolerantly</b>: it accepts BOTH today's 9-key camelCase adminka body AND
-/// the strict FASTPAY body of the byte-parity plan §4 A1 (which drops
-/// <c>merchantTxId</c>/<c>direction</c>/<c>occurredAt</c> and adds
-/// <c>clientId</c>, <c>method</c>, <c>username</c>, <c>usercode</c>,
-/// <c>note</c>, <c>dateTime</c>, <c>statusDateTime</c> and an <c>account</c>
-/// block). Shipping this tolerance BEFORE adminka flips makes the cutover — and
-/// a rollback in either direction — a no-op for the sim (§13: delivery must stay
-/// idempotent at the merchant; a shape change must never turn a settled callback
-/// into a hard failure).
+/// The merchant-facing transaction summary embedded in a callback, bound to the
+/// <b>STRICT FASTPAY v1.1 body ONLY</b> (business-logic.md §13, ratified gate
+/// G2, owner 2026-07-27). The Phase-1 tolerance that also bound adminka's older
+/// body is <b>gone</b> (byte-parity plan Phase 5 / WS-B.2, board TASK-278): the
+/// legacy additive fields <c>merchantTxId</c>, <c>direction</c> and
+/// <c>occurredAt</c> — dropped from the wire by that same §13 MUST — are
+/// deliberately ABSENT here.
 /// <para>
-/// Declared with init-only properties rather than positionally: the tolerant
+/// That absence is the POINT, not cleanup. The sim is a living
+/// FASTPAY-strictness canary: if adminka's wire ever drifts back toward the
+/// legacy shape, the callback loses its <c>clientId</c> and sim settlement
+/// fails loudly and immediately (HTTP 404 → §13 retry ladder → DLQ) instead of
+/// silently continuing to settle. Re-adding tolerance for the legacy fields
+/// would let exactly that regression ship unnoticed.
+/// </para>
+/// <para>
+/// The dual-shape <c>account</c> reader and the string-or-number <c>id</c>
+/// reader are <b>ratified permanent properties of the strict wire</b> (§13
+/// deposit/withdraw key sets; byte-parity register item B2) — not leftovers of
+/// the removed tolerance. Removing either breaks real traffic.
+/// </para>
+/// <para>
+/// Declared with init-only properties rather than positionally: the strict
 /// shape carries ~15 mostly-optional fields, so a positional record would make
 /// every future wire field a breaking positional change and make construction in
 /// tests unreadable.
 /// </para>
 /// <para>
-/// Fields other than <c>clientId</c>/<c>merchantTxId</c>/<c>status</c>/
-/// <c>amount</c>/<c>confirmedAmount</c>/<c>id</c> are <b>bind-but-ignore</b> —
+/// Fields other than <c>clientId</c>/<c>status</c>/<c>amount</c>/
+/// <c>confirmedAmount</c>/<c>id</c> are <b>bind-but-ignore</b> —
 /// nothing in <c>WalletService</c> reads them. They are deliberate, not dead
 /// weight: they document the received shape and keep the DTO a faithful mirror
 /// of the wire for future assertions/logging.
@@ -57,16 +68,14 @@ public sealed record AdminkaCallbackTransaction
     [JsonConverter(typeof(TolerantIdConverter))]
     public string? Id { get; init; }
 
-    /// <summary>The strict FASTPAY wire's settlement key (plan §4 A1) — the merchant's own id echoed back.</summary>
+    /// <summary>
+    /// <b>THE</b> settlement key (§13: <c>clientId</c> carries the merchant's own
+    /// <c>transactionId</c> echoed back). <c>WalletService.ProcessCallbackAsync</c>
+    /// keys the ledger lookup on this and nothing else; a body without it is a
+    /// wire regression and is refused rather than settled.
+    /// </summary>
     [JsonPropertyName("clientId")]
     public string? ClientId { get; init; }
-
-    /// <summary>
-    /// Today's live settlement key. Nullable now: the strict shape drops it, and
-    /// <c>clientId</c> takes over (see <c>WalletService.ProcessCallbackAsync</c>).
-    /// </summary>
-    [JsonPropertyName("merchantTxId")]
-    public string? MerchantTxId { get; init; }
 
     /// <summary>
     /// adminka status code. Deliberately NOT widened to a string/nullable:
@@ -92,14 +101,6 @@ public sealed record AdminkaCallbackTransaction
     /// <summary>Wire currency literal — <c>TRY</c>/<c>TL</c> are §14 synonyms; echoed, never branched on.</summary>
     [JsonPropertyName("currency")]
     public string? Currency { get; init; }
-
-    /// <summary>0=deposit, 1=withdraw. Dropped by the strict wire (plan §4 A1) — hence nullable.</summary>
-    [JsonPropertyName("direction")]
-    public short? Direction { get; init; }
-
-    /// <summary>ISO-8601 transition timestamp. Dropped by the strict wire (plan §4 A1) — hence nullable.</summary>
-    [JsonPropertyName("occurredAt")]
-    public DateTimeOffset? OccurredAt { get; init; }
 
     /// <summary>
     /// Creation timestamp. Bound as <b>text</b>, not <c>DateTimeOffset</c>: the
