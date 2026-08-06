@@ -55,6 +55,14 @@ spec:
               value: {{ .Values.adminkaMerchant.defaultMethod | quote }}
             - name: AdminkaMerchant__Currency
               value: {{ .Values.adminkaMerchant.currency | quote }}
+            {{- with .Values.adminkaPay.portalOrigins }}
+            # TASK-321 multi-domain: every origin the AdminkaPay hosted page is
+            # reachable at. The sim swaps the minted paymentUrl onto the one whose
+            # parent domain matches the player's current host, so a player on
+            # sim.hdpay.org is handed to pay.hdpay.org rather than crossing brands.
+            - name: AdminkaPay__PortalOrigins
+              value: {{ join "," . | quote }}
+            {{- end }}
             - name: AdminkaMerchant__SecretKey
               valueFrom:
                 secretKeyRef:

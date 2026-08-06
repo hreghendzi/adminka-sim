@@ -19,7 +19,8 @@ namespace AdminkaSim.Web.Pages;
 public sealed class DepositModel(
     UserManager<SimUser> userManager,
     SimDbContext db,
-    WalletService wallet) : PageModel
+    WalletService wallet,
+    IConfiguration configuration) : PageModel
 {
     [BindProperty]
     [Range(100, 100_000, ErrorMessage = "Amount must be between 100 and 100,000 TRY.")]
@@ -81,7 +82,15 @@ public sealed class DepositModel(
         // wallet still settles only on the hash-verified webhook callback.
         if (result.Success && !string.IsNullOrWhiteSpace(result.PaymentUrl))
         {
-            return Redirect(result.PaymentUrl);
+            // TASK-321 multi-domain: adminka mints paymentUrl from ONE configured
+            // portal host (the deposit call is server-to-server, so it carries no
+            // browser context, and that host is part of the merchant wire). When
+            // the sim answers on several domains, keep the player on the one they
+            // are already browsing — origin swap only, signed ref untouched.
+            return Redirect(PortalOriginMirror.Mirror(
+                result.PaymentUrl,
+                Request.Host.Value,
+                configuration["AdminkaPay:PortalOrigins"]));
         }
 
         ResultSuccess = result.Success;

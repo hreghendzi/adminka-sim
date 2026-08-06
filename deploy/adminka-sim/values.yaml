@@ -1,5 +1,6 @@
 # adminka-sim — standalone deployment values. NodePort 30480 fronted by
-# Cloudflare+HAProxy at https://sim.masisyepremyan.com (owner-wired).
+# Cloudflare+HAProxy at https://sim.masisyepremyan.com AND
+# https://sim.hdpay.org (owner-wired; same edge, same release).
 
 image:
   repository: docker.io/adminka/adminka-sim
@@ -25,9 +26,22 @@ adminkaMerchant:
   # contract at a config base URL".
   baseUrl: "http://adminka-main-adminka-umbrella-merchant-api.adminka-main.svc.cluster.local"
   mid: "ADMINKA_SIM_001"
+  # Server-to-server: adminka's WebhookDispatcher POSTs here, so this stays a
+  # single canonical host regardless of which domain the player is browsing.
   callbackUrl: "https://sim.masisyepremyan.com/callback"
   defaultMethod: "transfer"
   currency: "TRY"
+
+# ── AdminkaPay hosted-payment page (adminka board TASK-321) ─────────────────
+# Every origin the portal answers at. adminka mints `paymentUrl` from ONE
+# configured host (a merchant-wire value, so not per-request); the sim swaps it
+# onto whichever of these origins shares the parent domain of the host the
+# player is on, keeping a sim.hdpay.org player on hdpay.org. Origin only — the
+# signed `ref` path is carried over untouched. Empty list = no mirroring.
+adminkaPay:
+  portalOrigins:
+    - "https://pay.masisyepremyan.com"
+    - "https://pay.hdpay.org"
 
 # Pre-created (NOT in git) Secret with keys: merchant-secret, seed-password.
 secretName: adminka-sim-secrets
